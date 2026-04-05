@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HOSPITAL STRATEGIC SOFTWARE - FIXED VERSION</title>
+    
+    <!-- NẠP THƯ VIỆN ĐỒ THỊ VÀ GIAO DIỆN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        /* 1. QUẢN LÝ FONT CHỮ VÀ GIAO DIỆN TỔNG THỂ */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        
+        * { box-sizing: border-box; } /* Đảm bảo kích thước chuẩn không bị tràn lề */
+
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #f1f5f9; 
+            color: #000; 
+            height: 100vh; width: 100vw; 
+            margin: 0; padding: 0;
+            overflow: hidden; /* Cố định 16:9 không cho cuộn trang */
+        }
+
+        /* 2. ĐỊNH DẠNG MÀN HÌNH CHỌN DỮ LIỆU (OVERLAY) */
+        #data-selector-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(30, 58, 138, 0.98); 
+            z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: white; transition: 0.5s;
+        }
+
+        /* 3. QUẢN LÝ CHIỀU CAO (DÀN TRANG 16:9) */
+        header { height: 6vh; } 
+        nav { height: 7vh; }    
+        main { height: 87vh; padding: 1.5vh; position: relative; } 
+
+        /* 4. ĐỊNH DẠNG CÁC TAB NỘI DUNG */
+        .tab-content { 
+            display: none; /* Mặc định ẩn tất cả */
+            height: 100%; width: 100%;
+            grid-template-rows: auto 1fr; /* Hàng 1 tự động theo nội dung, hàng 2 chiếm hết phần còn lại */
+            gap: 1.5vh; 
+        }
+        .tab-content.active { display: grid; } /* Chỉ hiển thị thẻ có class 'active' */
+
+        /* 5. ĐỊNH DẠNG BANNER THÔNG TIN (DẢI XANH NHẠT TRÊN ĐẦU MỖI THẺ) */
+        .quarter-banner { 
+            height: 9vh; background: #dbeafe; 
+            border-left: 8px solid #1e3a8a; 
+            padding: 1vh 1.5vh; display: flex; justify-content: space-between; align-items: center; 
+        }
+
+        /* 6. ĐỊNH DẠNG CÁC Ô KPI (TỔNG QUAN) */
+        .kpi-box { 
+            border: 2px solid #1e3a8a; background: white; 
+            box-shadow: 4px 4px 0px #1e3a8a; 
+            border-radius: 0.75rem; padding: 1.5vh; height: 100%; 
+        }
+
+        /* 7. TRẠNG THÁI MENU KHI ĐƯỢC CHỌN (ACTIVE) */
+        .nav-active { 
+            background-color: #1e3a8a !important; 
+            color: #fff !important; 
+            border-bottom: 4px solid #facc15; 
+        }
+
+        .tab-link { 
+            color: #1e3a8a; font-weight: 900; font-size: 1rem; 
+            text-transform: uppercase; border-right: 1px solid #cbd5e1; 
+            flex: 1; height: 100%; display: flex; align-items: center; justify-content: center;
+        }
+
+        /* 8. ĐỊNH DẠNG CHỮ ĐẬM */
+        .text-black-bold { color: #000; font-weight: 900; }
+    </style>
+</head>
+<body class="flex flex-col">
+
+    <!-- MÀN HÌNH CHỌN DỮ LIỆU -->
+    <div id="data-selector-overlay">
+        <div class="bg-white p-10 rounded-3xl shadow-2xl text-blue-900 w-[450px] text-center border-4 border-yellow-400">
+            <h2 class="text-3xl font-black mb-2 uppercase italic">Hệ thống Dashboard</h2>
+            <p class="text-sm font-bold mb-8 text-slate-500 uppercase tracking-widest">Bệnh viện Phổi Thành phố Huế</p>
+            
+            <div class="grid grid-cols-2 gap-4 mb-8 text-left">
+                <div>
+                    <label class="block text-[10px] font-black text-blue-900 mb-1 uppercase italic">Chọn Quý:</label>
+                    <select id="quarter-select" class="w-full p-3 border-2 border-blue-900 rounded-xl font-black outline-none">
+                        <option value="q1">Quý I</option>
+                        <option value="q2">Quý II</option>
+                        <option value="q3">Quý III</option>
+                        <option value="q4">Quý IV</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black text-blue-900 mb-1 uppercase italic">Chọn Năm:</label>
+                    <select id="year-select" class="w-full p-3 border-2 border-blue-900 rounded-xl font-black outline-none">
+                        <option value="2026">Năm 2026</option>
+                        <option value="2027">Năm 2027</option>
+                        <option value="2028">Năm 2028</option>
+                        <option value="2029">Năm 2029</option>
+                        <option value="2030">Năm 2030</option>
+                    </select>
+                </div>
+            </div>
+
+            <button onclick="confirmDataLoad()" class="w-full bg-blue-900 text-white font-black py-4 rounded-xl hover:bg-blue-800 transition-all shadow-lg uppercase tracking-widest text-lg">
+                Bắt đầu hiển thị
+            </button>
+        </div>
+    </div>
+
+    <!-- TIÊU ĐỀ CHÍNH (HEADER) -->
+    <header class="bg-[#1e3a8a] text-white flex items-center justify-between px-8 shadow-xl">
+        <h1 id="main-title" class="text-xl font-black uppercase tracking-widest text-yellow-400 italic"></h1>
+        <div id="compare-label" class="text-sm font-bold bg-white text-blue-900 px-3 py-1 rounded"></div>
+    </header>
+
+    <!-- THANH ĐIỀU HƯỚNG (NAV) -->
+    <nav class="bg-white flex shadow-inner border-b">
+        <button id="btn-overview" onclick="openTab(event, 'overview')" class="tab-link nav-active">1. Tổng quan Quý</button>
+        <button id="btn-clinical" onclick="openTab(event, 'clinical')" class="tab-link">2. Khám & Nội trú</button>
+        <button id="btn-diagnostics" onclick="openTab(event, 'diagnostics')" class="tab-link">3. Cận lâm sàng - Thủ thuật</button>
+        <button id="btn-economics" onclick="openTab(event, 'economics')" class="tab-link">4. Chi phí BHYT</button>
+    </nav>
+
+    <main>
+        <!-- THẺ 1: TỔNG QUAN -->
+        <div id="overview" class="tab-content active">
+            <div id="kpi-grid" class="grid grid-cols-5 gap-4 h-[22vh]"></div>
+            <div class="bg-white p-4 rounded-xl border-2 border-slate-300 shadow-lg overflow-hidden h-full">
+                <table class="w-full text-center h-full border-collapse">
+                    <thead class="bg-slate-200 text-blue-900 font-black italic text-lg">
+                        <tr>
+                            <th class="p-2 border border-slate-300 uppercase">Chỉ số hiệu suất quý</th>
+                            <th id="th-prev" class="border border-slate-300"></th>
+                            <th id="th-curr" class="border border-slate-300"></th>
+                            <th class="border border-slate-300 uppercase">Biến động (%)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="performance-body" class="text-3xl font-black italic"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- THẺ 2: KHÁM & NỘI TRÚ -->
+        <div id="clinical" class="tab-content">
+            <div class="quarter-banner" id="banner-clinical"></div>
+            <div class="grid grid-cols-2 gap-4 overflow-hidden">
+                <div class="bg-white p-4 rounded-xl border-2 border-slate-300 shadow-md flex flex-col">
+                    <h3 class="text-center font-black text-blue-900 uppercase mb-2 italic text-sm">KHÁM VÀ NHẬP VIỆN</h3>
+                    <div class="h-full w-full relative"><canvas id="chartStackedExams"></canvas></div>
+                </div>
+                <div class="bg-white p-4 rounded-xl border-2 border-slate-300 shadow-md flex flex-col">
+                    <h3 class="text-center font-black text-orange-700 uppercase mb-2 italic text-sm">Diễn biến điều trị Nội trú</h3>
+                    <div class="h-full w-full relative"><canvas id="chartInpatient"></canvas></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- THẺ 3: CẬN LÂM SÀNG -->
+        <div id="diagnostics" class="tab-content">
+            <div class="quarter-banner" id="banner-diag"></div>
+            <div class="bg-white p-4 rounded-xl border-2 border-slate-300 shadow-md overflow-hidden">
+                <div class="h-full w-full relative"><canvas id="chartDiagType"></canvas></div>
+            </div>
+        </div>
+
+        <!-- THẺ 4: KINH TẾ BHYT -->
+        <div id="economics" class="tab-content">
+            <div class="quarter-banner" id="banner-eco"></div>
+            <div class="grid grid-cols-2 gap-4 overflow-hidden">
+                <div class="bg-white p-4 rounded-xl border-2 border-green-700 shadow-md flex flex-col">
+                    <h3 class="text-center font-black text-green-800 uppercase mb-2 italic text-sm">Kinh phí Ngoại trú BHYT (VNĐ)</h3>
+                    <div class="h-full w-full relative"><canvas id="chartEcoOut"></canvas></div>
+                </div>
+                <div class="bg-white p-4 rounded-xl border-2 border-red-700 shadow-md flex flex-col">
+                    <h3 class="text-center font-black text-red-800 uppercase mb-2 italic text-sm">Kinh phí Nội trú BHYT (VNĐ)</h3>
+                    <div class="h-full w-full relative"><canvas id="chartEcoIn"></canvas></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        /**
+         * 1. LOGIC TẢI DỮ LIỆU ĐỘNG
+         */
+        function confirmDataLoad() {
+            const q = document.getElementById('quarter-select').value;
+            const y = document.getElementById('year-select').value;
+            const fileName = `data-${q}-${y}.js`;
+            
+            const script = document.createElement('script');
+            script.src = fileName;
+            
+            script.onload = function() {
+                document.getElementById('data-selector-overlay').style.opacity = "0";
+                setTimeout(() => {
+                    document.getElementById('data-selector-overlay').style.display = "none";
+                    initDashboard();
+                }, 500);
+            };
+
+            script.onerror = function() { 
+                alert(`LỖI: Không tìm thấy file dữ liệu: ${fileName}\nVui lòng kiểm tra lại trong thư mục gốc.`); 
+            };
+
+            document.head.appendChild(script);
+        }
+
+        /**
+         * 2. CẤU HÌNH MẶC ĐỊNH CHO BIỂU ĐỒ
+         */
+        Chart.register(ChartDataLabels);
+        Chart.defaults.color = '#000'; 
+        Chart.defaults.font.weight = '900'; 
+        Chart.defaults.maintainAspectRatio = false; 
+        
+        const fmt = (n) => n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        
+        const fmtK = (val) => {
+            const roundedK = Math.round(val / 1000);
+            return roundedK.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "k";
+        };
+
+        /**
+         * 3. KHỞI TẠO NỘI DUNG DASHBOARD
+         */
+        function initDashboard() {
+            const s = hospitalData.settings;
+            const d = hospitalData.summary;
+
+            document.getElementById('main-title').innerText = `BỆNH VIỆN PHỔI THÀNH PHỐ HUẾ - ${s.currentQuarter} / ${s.currentYear}`;
+            document.getElementById('compare-label').innerText = `SO SÁNH CÙNG KỲ ${s.prevYear}`;
+            document.getElementById('th-prev').innerText = `${s.currentQuarter} / ${s.prevYear}`;
+            document.getElementById('th-curr').innerText = `${s.currentQuarter} / ${s.currentYear}`;
+
+            const calcGrowth = (curr, prev) => (((curr - prev) / prev) * 100).toFixed(1);
+
+            document.getElementById('kpi-grid').innerHTML = [
+                { lab: "Lượt Khám", val: d.exams, color: "blue" },
+                { lab: "Lượt Nội trú", val: d.inpatient, color: "blue" },
+                { lab: "Cận lâm sàng", val: d.diagnostics, color: "blue" },
+                { lab: "CP Ngoại trú", val: d.costOut, color: "green", unit: "đ" },
+                { lab: "CP Nội trú", val: d.costIn, color: "red", unit: "đ" }
+            ].map(k => `
+                <div class="kpi-box border-${k.color}-700">
+                    <p class="text-[1rem] font-black text-${k.color}-800 uppercase tracking-tighter">${k.lab} Quý</p>
+                    <p class="text-4xl text-black-bold mt-1">${fmt(k.val.current)}${k.unit || ''}</p>
+                    <p class="text-[1rem] font-bold text-green-700 italic mt-1">↑ ${calcGrowth(k.val.current, k.val.prev)}% (Cùng kỳ: ${fmt(k.val.prev)})</p>
+                </div>
+            `).join('');
+
+            document.getElementById('performance-body').innerHTML = hospitalData.performance.map((p, i) => `
+                <tr class="border border-slate-300 ${i===1?'bg-blue-50':''}">
+                    <td class="text-left px-8 text-blue-800 uppercase text-lg italic">${p.label}</td>
+                    <td>${p.prev}</td><td>${p.current}</td>
+                    <td class="${p.status==='good'||p.status==='up'?'text-green-600':'text-red-600'}">${p.change}</td>
+                </tr>
+            `).join('');
+
+            const bannerHTML = (title, stats) => `<div><h2 class="text-xl font-black text-blue-900 uppercase">${title}</h2><p class="text-sm font-bold text-blue-700 italic">${stats}</p></div><div class="text-right font-black bg-white px-4 py-1 rounded border-2 border-blue-900 text-sm italic uppercase tracking-tighter">${s.currentQuarter} / ${s.currentYear}</div>`;
+            document.getElementById('banner-clinical').innerHTML = bannerHTML(`Hoạt động Khám & Điều trị`, `Khám: ${fmt(d.exams.current)} | Nhập viện: ${fmt(d.admissions.current)} | Nội trú: ${fmt(d.inpatient.current)}`);
+            document.getElementById('banner-diag').innerHTML = bannerHTML(`Xét nghiệm & Cận lâm sàng`, `Tổng Quý: ${fmt(d.diagnostics.current)} lượt`);
+            document.getElementById('banner-eco').innerHTML = bannerHTML(`Kinh tế Y tế BHYT`, `Ngoại trú: ${fmt(d.costOut.current)}đ | Nội trú: ${fmt(d.costIn.current)}đ`);
+
+            renderCharts();
+        }
+
+        /**
+         * 4. VẼ CÁC BIỂU ĐỒ
+         */
+        function renderCharts() {
+            const c = hospitalData.charts;
+            const s = hospitalData.settings;
+            const months = c.months;
+
+            // --- BIỂU ĐỒ 1: KHÁM VÀ NHẬP VIỆN ---
+            new Chart(document.getElementById('chartStackedExams'), {
+                type: 'bar',
+                data: {
+                    labels: months,
+                    datasets: [
+                        { label: `Nhập viện ${s.prevYear}`, data: c.admissions.v2025, backgroundColor: '#9333ea', stack: 'prev' },
+                        { label: `Còn lại ${s.prevYear}`, data: c.exams.v2025.map((v, i) => v - c.admissions.v2025[i]), backgroundColor: '#16a34a', stack: 'prev' },
+                        { label: `Nhập viện ${s.currentYear}`, data: c.admissions.v2026, backgroundColor: '#facc15', stack: 'curr' },
+                        { label: `Còn lại ${s.currentYear}`, data: c.exams.v2026.map((v, i) => v - c.admissions.v2026[i]), backgroundColor: '#1e3a8a', stack: 'curr' }
+                    ]
+                },
+                options: {
+                    scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } },
+                    plugins: {
+  datalabels: {
+    anchor: 'end',
+    align: 'top',
+    formatter: (v, ctx) => {
+      const yearKey = ctx.datasetIndex < 2 ? 'v2025' : 'v2026';
+      const totalExams = hospitalData.charts.exams[yearKey][ctx.dataIndex];
+      if (ctx.datasetIndex === 0 || ctx.datasetIndex === 2) {
+        const rate = ((v / totalExams) * 100).toFixed(1);
+        return `${v}\n(${rate}%)`;
+      }
+      if (ctx.datasetIndex === 1 || ctx.datasetIndex === 3) {
+        return totalExams;
+      }
+    },
+    font: { size: 14, weight: 'bold' },
+    color: (ctx) => {
+      // Nhập viện → chữ đen
+      if (ctx.datasetIndex === 0 || ctx.datasetIndex === 2) return 'white';
+      // Còn lại → chữ trắng
+      return 'black';
+    },
+    textStrokeColor: 'black', // màu viền
+    textStrokeWidth: 0        // độ dày viền
+  }
+}
+                }
+            });
+
+            // --- BIỂU ĐỒ 2: NỘI TRÚ ---
+            new Chart(document.getElementById('chartInpatient'), {
+                type: 'bar',
+                data: {
+                    labels: months,
+                    datasets: [
+                        { label: s.prevYear, data: c.inpatient.v2025, backgroundColor: '#cbd5e1' },
+                        { label: s.currentYear, data: c.inpatient.v2026, backgroundColor: '#ea580c' }
+                    ]
+                },
+                options: { plugins: { datalabels: { anchor: 'end', align: 'top', font: { size: 14, weight: 'bold' } } } }
+            });
+
+            // --- BIỂU ĐỒ 3: CẬN LÂM SÀNG ---
+            new Chart(document.getElementById('chartDiagType'), {
+                type: 'bar',
+                data: {
+                    labels: c.diagTypes.labels,
+                    datasets: [
+                        { label: s.prevYear, data: c.diagTypes.v2025, backgroundColor: '#94a3b8' },
+                        { label: s.currentYear, data: c.diagTypes.v2026, backgroundColor: '#1e3a8a' }
+                    ]
+                },
+                options: { indexAxis: 'y', plugins: { datalabels: { anchor: 'end', align: 'right', formatter: fmt, font: { size: 14, weight: 'bold' } } } }
+            });
+
+            // --- BIỂU ĐỒ 4: KINH TẾ BHYT (NGOẠI TRÚ) ---
+            new Chart(document.getElementById('chartEcoOut'), {
+                type: 'line',
+                data: {
+                    labels: months,
+                    datasets: [
+                        { label: s.prevYear, data: c.ecoOut.v2025, borderColor: '#94a3b8', borderDash:[5,5] },
+                        { label: s.currentYear, data: c.ecoOut.v2026, borderColor: '#15803d', borderWidth:5, pointRadius:8 }
+                    ]
+                },
+                options: {
+                    plugins: {
+                        tooltip: { enabled: true, callbacks: { label: (ctx) => `Số tiền: ${fmt(ctx.raw)}đ` } },
+                        datalabels: {
+                            formatter: (v) => fmtK(v),
+                            backgroundColor: (ctx) => ctx.datasetIndex === 1 ? '#15803d' : '#94a3b8',
+                            color: '#fff', borderRadius: 4, padding: 4,
+                            align: (ctx) => ctx.datasetIndex === 1 ? 'top' : 'bottom',
+                            offset: 10
+                        }
+                    }
+                }
+            });
+
+            // --- BIỂU ĐỒ 5: KINH TẾ BHYT (NỘI TRÚ) ---
+            new Chart(document.getElementById('chartEcoIn'), {
+                type: 'line',
+                data: {
+                    labels: months,
+                    datasets: [
+                        { label: s.prevYear, data: c.ecoIn.v2025, borderColor: '#94a3b8', borderDash:[5,5] },
+                        { label: s.currentYear, data: c.ecoIn.v2026, borderColor: '#b91c1c', borderWidth:5, pointRadius:8 }
+                    ]
+                },
+                options: {
+                    plugins: {
+                        tooltip: { enabled: true, callbacks: { label: (ctx) => `Số tiền: ${fmt(ctx.raw)}đ` } },
+                        datalabels: {
+                            formatter: (v) => fmtK(v),
+                            backgroundColor: (ctx) => ctx.datasetIndex === 1 ? '#b91c1c' : '#94a3b8',
+                            color: '#fff', borderRadius: 4, padding: 4,
+                            align: (ctx) => ctx.datasetIndex === 1 ? 'top' : 'bottom',
+                            offset: 10
+                        }
+                    }
+                }
+            });
+        }
+
+        /**
+         * 5. ĐIỀU KHIỂN CHUYỂN ĐỔI CÁC THẺ (TAB CONTROL)
+         * Hàm này đảm bảo các Tab được chuyển đổi mượt mà và đúng ID
+         */
+        function openTab(evt, tabName) {
+            // Ẩn tất cả các nội dung tab
+            const contents = document.querySelectorAll(".tab-content");
+            contents.forEach(t => t.classList.remove("active"));
+            
+            // Bỏ trạng thái active của tất cả các nút menu
+            const links = document.querySelectorAll(".tab-link");
+            links.forEach(l => l.classList.remove("nav-active"));
+            
+            // Hiển thị tab được chọn và đánh dấu nút menu
+            document.getElementById(tabName).classList.add("active");
+            evt.currentTarget.classList.add("nav-active");
+        }
+    </script>
+</body>
+</html>
