@@ -243,11 +243,11 @@
             const calcGrowth = (curr, prev) => (((curr - prev) / prev) * 100).toFixed(1);
 
             document.getElementById('kpi-grid').innerHTML = [
-                { lab: "Lượt Khám bệnh", val: d.exams, color: "blue", unit: "Lượt" },
-                { lab: "Lượt Nội trú", val: d.inpatient, color: "blue", unit: "Lượt" },
-                { lab: "Cận lâm sàng", val: d.diagnostics, color: "blue", unit: "Lượt" },
-                { lab: "Bình quân đơn Ngoại trú", val: d.costOut, color: "green", unit: "đ" },
-                { lab: "Bình quân đơn Nội trú", val: d.costIn, color: "red", unit: "đ" }
+                { lab: "Lượt Khám bệnh ", val: d.exams, color: "blue", unit: "Lượt" },
+                { lab: "Lượt Nội trú ", val: d.inpatient, color: "blue", unit: "Lượt" },
+                { lab: "Cận lâm sàng ", val: d.diagnostics, color: "blue", unit: "Lượt" },
+                { lab: "Bình quân đơn Ngoại trú ", val: d.costOut, color: "green", unit: "đ" },
+                { lab: "Bình quân đơn Nội trú ", val: d.costIn, color: "red", unit: "đ" }
             ].map(k => `
                 <div class="kpi-box border-${k.color}-700">
                     <p class="text-[1rem] font-black text-${k.color}-800 uppercase tracking-tighter">${k.lab} Quý</p>
